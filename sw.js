@@ -1,9 +1,9 @@
-const CACHE_NAME = "gemini-pwa-v7";
+const CACHE_NAME = "radio-app-v1";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
   "/manifest.json",
-  "/icon-512.png"
+  "/icon-radio-512.png"
 ];
 
 // 1. Instalar y guardar recursos estáticos en caché
