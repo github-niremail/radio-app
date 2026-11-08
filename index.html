@@ -157,17 +157,21 @@
       <div class="radio-controls">
         <select id="station-select">
           <option value="">Selecciona emisora...</option>
+          <option value="https://mp3-eitb.stream.flumotion.com/eitb/radioeuskadi.mp3">Radio Euskadi</option>
+          <option value="https://f111.rndfnk.com/star/crtve/rne5/ten/mp3/128/stream.mp3?cid=01GEP4TFQZ5W4H98CFP49FZDMS&sid=3LoYKKkThJdSOEqxtm3GWfsE2U4&token=W5xFT1Y_GFseQWnEvegs6mJeHypXVnPRagAlkS2-Rjw&tvf=XFyD7e8T5hhmMTExLnJuZGZuay5jb20">Radio Nacional de España (RNE 5)</option>
+          <option value="https://wecast-bl01.flumotion.com/copesedes/bilbao-mas.mp3">COPE (Bilbao)</option>
+          <option value="https://25483.live.streamtheworld.com/SER_BILBAOAAC.aac">Cadena SER (Bilbao)</option>
+          <option value="https://cdn-peer022.streaming-pro.com:6133/radionervion.aac">Radio Nervion</option>
+          <option value="https://nerbioi.radiopopular.eus/bizkaiairratia2">Bizkaia Irratia</option>
+          <option value="https://online.arrateirratia.eus/zuzenean">Arrate Irratia</option>
+          <option value="https://srv7021.dns-lcinternet.com/8072/stream">Radio Merindades</option>
           <option value="https://media-ice.musicradio.com/SmoothUKMP3">Smooth UK</option>
           <option value="https://media-ice.musicradio.com/GoldMP3">Gold</option>
           <option value="https://media-ice.musicradio.com/LBCLondonMP3Low">LBC London</option>
           <option value="https://radio.virginradio.co.uk/stream">Virgin Radio</option>
           <option value="https://media-ice.musicradio.com/CapitalMP3">Capital FM</option>
-          <option value="https://nerbioi.radiopopular.eus/bizkaiairratia2">Bizkaia Irratia</option>
-          <option value="https://online.arrateirratia.eus/zuzenean">Arrate Irratia</option>
           <option value="https://fm939.wnyc.org/wnycfm">NPR News</option>
           <option value="https://stream.live.vc.bbcmedia.co.uk/bbc_world_service">BBC News</option>
-          <option value="https://cdn-peer022.streaming-pro.com:6133/radionervion.aac">Radio Nervion</option>
-          <option value="https://srv7021.dns-lcinternet.com/8072/stream">Radio Merindades</option>
         </select>
         <button id="radio-btn" class="radio-btn" onclick="togglePlayRadio()">▶ Oír</button>
       </div>
@@ -200,14 +204,14 @@
   </div>
 
   <script>
-    // 1. Service Worker registration for offline PWA shell
+    // 1. Registro del Service Worker
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("./sw.js").catch(console.error);
       });
     }
 
-    // 2. Audio Player & Time-Shift logic
+    // 2. Control de Audio y Time-Shift
     const player = document.getElementById("audio-player");
     const radioBtn = document.getElementById("radio-btn");
     const radioStatus = document.getElementById("radio-status");
@@ -216,6 +220,22 @@
 
     let currentDelay = 0;
     let delayTimer = null;
+
+    function updateMediaSession(stationName) {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: stationName || 'Radio en directo',
+          artist: currentDelay === 0 ? 'En directo' : `Diferido (-${currentDelay}s)`,
+          album: 'Radio Time-Shift',
+          artwork: [
+            { src: './icon-radio-512.png', sizes: '512x512', type: 'image/png' }
+          ]
+        });
+
+        navigator.mediaSession.setActionHandler('play', () => togglePlayRadio());
+        navigator.mediaSession.setActionHandler('pause', () => togglePlayRadio());
+      }
+    }
 
     function handleDelayInput(val) {
       const targetSec = parseInt(val, 10);
@@ -230,7 +250,10 @@
         if (player.seekable && player.seekable.length > 0) {
           player.currentTime = player.seekable.end(player.seekable.length - 1);
         }
-        if (!player.paused) radioStatus.textContent = "En directo 🔴";
+        if (!player.paused) {
+          radioStatus.textContent = "En directo 🔴";
+          updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+        }
         return;
       }
 
@@ -253,6 +276,7 @@
             currentDelay = targetSec;
             player.play().then(() => {
               radioStatus.textContent = `En diferido (-${currentDelay}s) 🟡`;
+              updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
             }).catch(console.error);
           }
         }, 1000);
@@ -260,12 +284,15 @@
         currentDelay = targetSec;
         if (!player.paused) {
           radioStatus.textContent = `En diferido (-${currentDelay}s) 🟡`;
+          updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
         }
       }
     }
 
     async function togglePlayRadio() {
       const url = stationSelect.value;
+      const stationName = stationSelect.options[stationSelect.selectedIndex]?.text;
+
       if (!url) {
         alert("Selecciona primero una emisora de la lista.");
         return;
@@ -297,6 +324,7 @@
           } else {
             radioStatus.textContent = "En directo 🔴";
           }
+          updateMediaSession(stationName);
         } catch (err) {
           console.error("Error al iniciar reproducción:", err);
           radioBtn.textContent = "▶ Oír";
