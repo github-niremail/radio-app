@@ -94,4 +94,519 @@
     .radio-controls { 
       display: flex; 
       gap: 10px; 
-      align-
+      align-items: center; 
+      margin-bottom: 16px; 
+    }
+
+    select, input[type="time"] { 
+      flex: 1; 
+      padding: 12px; 
+      border-radius: 10px; 
+      border: 1px solid #d1d1d6; 
+      font-size: 15px; 
+      background: #f8f9fa; 
+      outline: none; 
+    }
+
+    .radio-btn { 
+      background: #007aff; 
+      color: white; 
+      border: none; 
+      border-radius: 10px; 
+      padding: 12px 18px; 
+      font-weight: 600; 
+      font-size: 15px; 
+      cursor: pointer; 
+      white-space: nowrap; 
+      transition: background 0.2s ease;
+    }
+
+    .delay-container {
+      background: #f8f9fa;
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .delay-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      font-size: 13px; 
+      font-weight: 600; 
+      color: #333; 
+    }
+
+    .delay-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #d1d1d6;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .delay-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #007aff;
+      cursor: pointer;
+    }
+
+    .delay-scale {
+      display: flex; 
+      justify-content: space-between; 
+      font-size: 11px; 
+      color: #8e8e93; 
+    }
+
+    /* Opciones de los modos */
+    .mode-content {
+      background: #f8f9fa;
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 8px;
+    }
+
+    .badge-info {
+      font-size: 12px;
+      color: #007aff;
+      font-weight: 600;
+      margin-top: 6px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>Radio Streaming • Time-Shift</span>
+  </header>
+
+  <div id="main-container">
+    <!-- Tarjeta Reproductor Principal -->
+    <div class="app-card">
+      <div class="card-header">
+        <span>📻 EMISORAS DISPONIBLES</span>
+        <span id="radio-status" style="color:#007aff;">Detenido</span>
+      </div>
+
+      <!-- Selector de idioma -->
+      <div class="tab-group">
+        <button class="tab-btn lang-btn" data-lang="eu" onclick="selectLanguage('eu')">Euskera</button>
+        <button class="tab-btn lang-btn" data-lang="es" onclick="selectLanguage('es')">Castellano</button>
+        <button class="tab-btn lang-btn" data-lang="en" onclick="selectLanguage('en')">Inglés</button>
+      </div>
+      
+      <div class="radio-controls">
+        <select id="station-select">
+          <!-- Opciones dinámicas -->
+        </select>
+        <button id="radio-btn" class="radio-btn" onclick="togglePlayRadio()">▶ Oír</button>
+      </div>
+
+      <!-- Control de retardo Time-Shift -->
+      <div class="delay-container">
+        <div class="delay-header">
+          <span>⏱️ Retardo de audio:</span>
+          <span id="delay-value" style="color: #007aff; font-weight: bold;">0 segundos (Directo)</span>
+        </div>
+        <input 
+          type="range" 
+          id="delay-slider" 
+          class="delay-slider" 
+          min="0" 
+          max="120" 
+          value="0" 
+          step="1" 
+          oninput="handleDelayInput(this.value)"
+        >
+        <div class="delay-scale">
+          <span>0s (Directo)</span>
+          <span>60s</span>
+          <span>120s (2 min)</span>
+        </div>
+      </div>
+
+      <audio id="audio-player" preload="none"></audio>
+    </div>
+
+    <!-- Tarjeta Modos de Funcionamiento -->
+    <div class="app-card">
+      <div class="card-header">
+        <span>⚙️ MODO DE FUNCIONAMIENTO</span>
+        <span id="mode-summary" style="color:#8e8e93;">Normal</span>
+      </div>
+
+      <div class="tab-group">
+        <button class="tab-btn mode-btn active" data-mode="normal" onclick="setMode('normal')">Normal</button>
+        <button class="tab-btn mode-btn" data-mode="timer" onclick="setMode('timer')">Temporizador</button>
+        <button class="tab-btn mode-btn" data-mode="alarm" onclick="setMode('alarm')">Despertador</button>
+      </div>
+
+      <!-- Opciones Modo Temporizador (Apagado automático) -->
+      <div id="opts-timer" class="mode-content" style="display: none;">
+        <label style="font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 6px;">
+          Apagar la radio tras:
+        </label>
+        <div style="display: flex; gap: 8px;">
+          <select id="timer-duration" onchange="startSleepTimer()">
+            <option value="15">15 minutos</option>
+            <option value="30" selected>30 minutos</option>
+            <option value="45">45 minutos</option>
+            <option value="60">60 minutos (1 hora)</option>
+            <option value="90">90 minutos (1.5 horas)</option>
+            <option value="120">120 minutos (2 horas)</option>
+          </select>
+        </div>
+        <span id="timer-countdown" class="badge-info">Temporizador activo</span>
+      </div>
+
+      <!-- Opciones Modo Despertador (Encendido automático) -->
+      <div id="opts-alarm" class="mode-content" style="display: none;">
+        <label style="font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 6px;">
+          Hora de encendido automático:
+        </label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="time" id="alarm-time" onchange="setupAlarm()">
+        </div>
+        <span id="alarm-status" class="badge-info">Introduce una hora para programar el encendido</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Registro Service Worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(console.error);
+      });
+    }
+
+    // 2. Base de datos de emisoras
+    const stationsByLang = {
+      eu: [
+        { name: "Bizkaia Irratia", url: "https://nerbioi.radiopopular.eus/bizkaiairratia2" },
+        { name: "Arrate Irratia", url: "https://online.arrateirratia.eus/zuzenean" }
+      ],
+      es: [
+        { name: "Radio Nacional de España (RNE 5)", url: "https://f111.rndfnk.com/star/crtve/rne5/ten/mp3/128/stream.mp3?cid=01GEP4TFQZ5W4H98CFP49FZDMS&sid=3LoYKKkThJdSOEqxtm3GWfsE2U4&token=W5xFT1Y_GFseQWnEvegs6mJeHypXVnPRagAlkS2-Rjw&tvf=XFyD7e8T5hhmMTExLnJuZGZuay5jb20" },
+        { name: "COPE (Bilbao)", url: "https://wecast-bl01.flumotion.com/copesedes/bilbao-mas.mp3" },
+        { name: "Cadena SER (Bilbao)", url: "https://25483.live.streamtheworld.com/SER_BILBAOAAC.aac" },
+        { name: "Radio Nervion", url: "https://cdn-peer022.streaming-pro.com:6133/radionervion.aac" },
+        { name: "Radio Merindades", url: "https://srv7021.dns-lcinternet.com/8072/stream" }
+      ],
+      en: [
+        { name: "Smooth UK", url: "https://media-ice.musicradio.com/SmoothUKMP3" },
+        { name: "Gold", url: "https://media-ice.musicradio.com/GoldMP3" },
+        { name: "LBC London", url: "https://media-ice.musicradio.com/LBCLondonMP3Low" },
+        { name: "Virgin Radio", url: "https://radio.virginradio.co.uk/stream" },
+        { name: "Capital FM", url: "https://media-ice.musicradio.com/CapitalMP3" },
+        { name: "NPR News", url: "https://fm939.wnyc.org/wnycfm" },
+        { name: "BBC News", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service" }
+      ]
+    };
+
+    const player = document.getElementById("audio-player");
+    const radioBtn = document.getElementById("radio-btn");
+    const radioStatus = document.getElementById("radio-status");
+    const stationSelect = document.getElementById("station-select");
+    const delayValueLabel = document.getElementById("delay-value");
+
+    let currentDelay = 0;
+    let delayTimer = null;
+
+    // 3. Gestión de Idioma
+    function populateStations(lang) {
+      stationSelect.innerHTML = '<option value="">Selecciona emisora...</option>';
+      const list = stationsByLang[lang] || [];
+      list.forEach(station => {
+        const opt = document.createElement("option");
+        opt.value = station.url;
+        opt.textContent = station.name;
+        stationSelect.appendChild(opt);
+      });
+    }
+
+    function selectLanguage(lang) {
+      localStorage.setItem("radio_selected_lang", lang);
+      document.querySelectorAll(".lang-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.lang === lang);
+      });
+
+      if (!player.paused) {
+        player.pause();
+        radioBtn.textContent = "▶ Oír";
+        radioBtn.style.background = "#007aff";
+        radioStatus.textContent = "Detenido";
+      }
+
+      populateStations(lang);
+
+      if (delayTimer) {
+        clearInterval(delayTimer);
+        delayTimer = null;
+      }
+      currentDelay = 0;
+      document.getElementById("delay-slider").value = 0;
+      delayValueLabel.textContent = "0 segundos (Directo)";
+    }
+
+    const savedLang = localStorage.getItem("radio_selected_lang") || "eu";
+    selectLanguage(savedLang);
+
+    // 4. Modos de funcionamiento (Normal / Temporizador / Despertador)
+    let currentMode = "normal";
+    let sleepTimerId = null;
+    let sleepTargetTime = null;
+    let alarmCheckId = null;
+    let alarmTargetTime = null;
+
+    function setMode(mode) {
+      currentMode = mode;
+
+      document.querySelectorAll(".mode-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === mode);
+      });
+
+      document.getElementById("opts-timer").style.display = mode === "timer" ? "block" : "none";
+      document.getElementById("opts-alarm").style.display = mode === "alarm" ? "block" : "none";
+
+      const summaryEl = document.getElementById("mode-summary");
+
+      if (mode === "normal") {
+        summaryEl.textContent = "Continuo";
+        clearSleepTimer();
+        clearAlarm();
+      } else if (mode === "timer") {
+        summaryEl.textContent = "Auto-apagado";
+        clearAlarm();
+        startSleepTimer();
+      } else if (mode === "alarm") {
+        summaryEl.textContent = "Auto-encendido";
+        clearSleepTimer();
+        setupAlarm();
+      }
+    }
+
+    function clearSleepTimer() {
+      if (sleepTimerId) {
+        clearInterval(sleepTimerId);
+        sleepTimerId = null;
+      }
+      sleepTargetTime = null;
+    }
+
+    function startSleepTimer() {
+      clearSleepTimer();
+      const mins = parseInt(document.getElementById("timer-duration").value, 10);
+      sleepTargetTime = Date.now() + mins * 60 * 1000;
+
+      function updateCountdown() {
+        const remainingMs = sleepTargetTime - Date.now();
+        if (remainingMs <= 0) {
+          clearSleepTimer();
+          if (!player.paused) {
+            player.pause();
+            radioBtn.textContent = "▶ Oír";
+            radioBtn.style.background = "#007aff";
+            radioStatus.textContent = "Apagado por temporizador 💤";
+          }
+          document.getElementById("timer-countdown").textContent = "Temporizador finalizado (Radio apagada)";
+        } else {
+          const totalSec = Math.ceil(remainingMs / 1000);
+          const m = Math.floor(totalSec / 60);
+          const s = totalSec % 60;
+          document.getElementById("timer-countdown").textContent = 
+            `La radio se apagará en: ${m}m ${String(s).padStart(2, '0')}s`;
+        }
+      }
+
+      updateCountdown();
+      sleepTimerId = setInterval(updateCountdown, 1000);
+    }
+
+    function clearAlarm() {
+      if (alarmCheckId) {
+        clearInterval(alarmCheckId);
+        alarmCheckId = null;
+      }
+      alarmTargetTime = null;
+    }
+
+    function setupAlarm() {
+      clearAlarm();
+      const timeVal = document.getElementById("alarm-time").value;
+      const statusEl = document.getElementById("alarm-status");
+
+      if (!timeVal) {
+        statusEl.textContent = "Introduce una hora para programar el encendido";
+        return;
+      }
+
+      alarmTargetTime = timeVal;
+      statusEl.textContent = `⏰ Despertador programado para las ${alarmTargetTime}`;
+
+      alarmCheckId = setInterval(() => {
+        const now = new Date();
+        const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        if (currentHHMM === alarmTargetTime && player.paused) {
+          clearAlarm();
+          statusEl.textContent = "⏰ ¡Alarma activada! Encendiendo...";
+          togglePlayRadio();
+        }
+      }, 1000);
+    }
+
+    // 5. Controles multimedia MediaSession
+    function updateMediaSession(stationName) {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: stationName || 'Radio en directo',
+          artist: currentDelay === 0 ? 'En directo' : `Diferido (-${currentDelay}s)`,
+          album: 'Radio Time-Shift',
+          artwork: [
+            { src: './icon-radio-512.png', sizes: '512x512', type: 'image/png' }
+          ]
+        });
+
+        navigator.mediaSession.setActionHandler('play', () => togglePlayRadio());
+        navigator.mediaSession.setActionHandler('pause', () => togglePlayRadio());
+      }
+    }
+
+    // 6. Lógica de retardo Time-Shift
+    function handleDelayInput(val) {
+      const targetSec = parseInt(val, 10);
+      delayValueLabel.textContent = targetSec === 0 ? "0 segundos (Directo)" : `${targetSec} segundo${targetSec > 1 ? 's' : ''}`;
+
+      if (targetSec === 0) {
+        if (delayTimer) {
+          clearInterval(delayTimer);
+          delayTimer = null;
+        }
+        currentDelay = 0;
+        if (player.seekable && player.seekable.length > 0) {
+          player.currentTime = player.seekable.end(player.seekable.length - 1);
+        }
+        if (!player.paused) {
+          radioStatus.textContent = "En directo 🔴";
+          updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+        }
+        return;
+      }
+
+      if (!player.paused && targetSec > currentDelay) {
+        const additionalWait = targetSec - currentDelay;
+        player.pause();
+
+        let remaining = additionalWait;
+        radioStatus.textContent = `Sincronizando delay (${remaining}s)...`;
+
+        if (delayTimer) clearInterval(delayTimer);
+
+        delayTimer = setInterval(() => {
+          remaining--;
+          if (remaining > 0) {
+            radioStatus.textContent = `Sincronizando delay (${remaining}s)...`;
+          } else {
+            clearInterval(delayTimer);
+            delayTimer = null;
+            currentDelay = targetSec;
+            player.play().then(() => {
+              radioStatus.textContent = `En diferido (-${currentDelay}s) 🟡`;
+              updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+            }).catch(console.error);
+          }
+        }, 1000);
+      } else {
+        currentDelay = targetSec;
+        if (!player.paused) {
+          radioStatus.textContent = `En diferido (-${currentDelay}s) 🟡`;
+          updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+        }
+      }
+    }
+
+    async function togglePlayRadio() {
+      const url = stationSelect.value;
+      const stationName = stationSelect.options[stationSelect.selectedIndex]?.text;
+
+      if (!url) {
+        alert("Selecciona primero una emisora de la lista.");
+        return;
+      }
+
+      if (delayTimer) {
+        clearInterval(delayTimer);
+        delayTimer = null;
+      }
+
+      if (player.paused) {
+        radioBtn.textContent = "⌛ Conectando...";
+        radioBtn.disabled = true;
+        radioStatus.textContent = "Conectando stream...";
+
+        if (player.src !== url) {
+          player.src = url;
+          player.load();
+        }
+
+        try {
+          await player.play();
+          radioBtn.textContent = "⏸ Pausar";
+          radioBtn.style.background = "#ff3b30";
+          radioBtn.disabled = false;
+
+          if (currentDelay > 0) {
+            handleDelayInput(currentDelay);
+          } else {
+            radioStatus.textContent = "En directo 🔴";
+          }
+          updateMediaSession(stationName);
+
+          // Si el temporizador estaba seleccionado, reiniciar la cuenta atrás al encender
+          if (currentMode === "timer") {
+            startSleepTimer();
+          }
+        } catch (err) {
+          console.error("Error al iniciar reproducción:", err);
+          radioBtn.textContent = "▶ Oír";
+          radioBtn.style.background = "#007aff";
+          radioBtn.disabled = false;
+          radioStatus.textContent = "Error de emisión";
+          alert("No se pudo reproducir este stream en tu dispositivo.");
+        }
+      } else {
+        player.pause();
+        radioBtn.textContent = "▶ Oír";
+        radioBtn.style.background = "#007aff";
+        radioStatus.textContent = "En pausa";
+      }
+    }
+
+    stationSelect.addEventListener("change", () => {
+      if (delayTimer) {
+        clearInterval(delayTimer);
+        delayTimer = null;
+      }
+      player.pause();
+      player.src = stationSelect.value;
+      radioBtn.textContent = "▶ Oír";
+      radioBtn.style.background = "#007aff";
+      radioStatus.textContent = "Lista";
+      currentDelay = 0;
+      document.getElementById("delay-slider").value = 0;
+      delayValueLabel.textContent = "0 segundos (Directo)";
+    });
+  </script>
+</body>
+</html>
