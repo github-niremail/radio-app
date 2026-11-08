@@ -1,4 +1,4 @@
-const CACHE_NAME = "radio-app-v1";
+const CACHE_NAME = "radio-app-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
