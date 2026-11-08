@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Radio Player • Time-Shift</title>
+  <title>Nire Irratia</title>
 
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#007aff">
@@ -180,7 +180,7 @@
 <body>
 
   <header>
-    <span>Radio Player • Time-Shift</span>
+    <span>Nire Irratia</span>
   </header>
 
   <div id="main-container">
@@ -326,7 +326,6 @@
         stationSelect.appendChild(opt);
       });
 
-      // Si existe una emisora guardada en localStorage y pertenece a este idioma, se auto-selecciona
       if (savedStation && list.some(s => s.url === savedStation)) {
         stationSelect.value = savedStation;
       }
@@ -680,7 +679,7 @@
         navigator.mediaSession.metadata = new MediaMetadata({
           title: stationName || 'Radio en directo',
           artist: currentDelay === 0 ? 'En directo' : `Diferido (-${currentDelay}s)`,
-          album: 'Radio Time-Shift',
+          album: 'Nire Irratia',
           artwork: [
             { src: './icon-radio-512.png', sizes: '512x512', type: 'image/png' }
           ]
