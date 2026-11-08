@@ -65,7 +65,6 @@
       margin-bottom: 12px; 
     }
 
-    /* Selector de idiomas y modos */
     .tab-group {
       display: flex;
       gap: 6px;
@@ -74,7 +73,7 @@
 
     .tab-btn {
       flex: 1;
-      padding: 8px 10px;
+      padding: 10px 8px;
       border: 1px solid #d1d1d6;
       border-radius: 8px;
       background: #f8f9fa;
@@ -83,12 +82,19 @@
       color: #3a3a3c;
       cursor: pointer;
       transition: all 0.2s ease;
+      text-align: center;
     }
 
     .tab-btn.active {
       background: #007aff;
       color: #ffffff;
       border-color: #007aff;
+    }
+
+    .tab-btn.playing {
+      background: #34c759;
+      color: #ffffff;
+      border-color: #28a745;
     }
 
     .radio-controls { 
@@ -106,19 +112,7 @@
       font-size: 15px; 
       background: #f8f9fa; 
       outline: none; 
-    }
-
-    .radio-btn { 
-      background: #007aff; 
-      color: white; 
-      border: none; 
-      border-radius: 10px; 
-      padding: 12px 18px; 
-      font-weight: 600; 
-      font-size: 15px; 
-      cursor: pointer; 
-      white-space: nowrap; 
-      transition: background 0.2s ease;
+      width: 100%;
     }
 
     .delay-container {
@@ -166,7 +160,6 @@
       color: #8e8e93; 
     }
 
-    /* Opciones de los modos */
     .mode-content {
       background: #f8f9fa;
       border: 1px solid #e5e5ea;
@@ -187,7 +180,7 @@
 <body>
 
   <header>
-    <span>Radio Streaming • Time-Shift</span>
+    <span>Radio Player • Time-Shift</span>
   </header>
 
   <div id="main-container">
@@ -206,10 +199,9 @@
       </div>
       
       <div class="radio-controls">
-        <select id="station-select">
+        <select id="station-select" onchange="onStationChanged()">
           <!-- Opciones dinámicas -->
         </select>
-        <button id="radio-btn" class="radio-btn" onclick="togglePlayRadio()">▶ Oír</button>
       </div>
 
       <!-- Control de retardo Time-Shift -->
@@ -238,20 +230,20 @@
       <audio id="audio-player" preload="none"></audio>
     </div>
 
-    <!-- Tarjeta Modos de Funcionamiento -->
+    <!-- Tarjeta Modos de Funcionamiento y Controles -->
     <div class="app-card">
       <div class="card-header">
-        <span>⚙️ MODO DE FUNCIONAMIENTO</span>
-        <span id="mode-summary" style="color:#8e8e93;">Normal</span>
+        <span>⚙️ MODO Y REPRODUCCIÓN</span>
+        <span id="mode-summary" style="color:#8e8e93;">Detenido</span>
       </div>
 
       <div class="tab-group">
-        <button class="tab-btn mode-btn active" data-mode="normal" onclick="setMode('normal')">Normal</button>
-        <button class="tab-btn mode-btn" data-mode="timer" onclick="setMode('timer')">Temporizador</button>
-        <button class="tab-btn mode-btn" data-mode="alarm" onclick="setMode('alarm')">Despertador</button>
+        <button id="btn-normal" class="tab-btn mode-btn active" onclick="activateNormalMode()">▶ Normal</button>
+        <button id="btn-timer" class="tab-btn mode-btn" onclick="activateTimerMode()">⏱️ Temporizador</button>
+        <button id="btn-alarm" class="tab-btn mode-btn" onclick="activateAlarmMode()">⏰ Despertador</button>
       </div>
 
-      <!-- Opciones Modo Temporizador (Cuadro de minutos manual) -->
+      <!-- Opciones Modo Temporizador -->
       <div id="opts-timer" class="mode-content" style="display: none;">
         <label style="font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 6px;">
           Minutos hasta el apagado:
@@ -263,36 +255,33 @@
             min="1" 
             max="360" 
             value="30" 
-            placeholder="Minutos (ej. 30)" 
-            onchange="startSleepTimer()"
-            oninput="startSleepTimer()"
+            placeholder="Minutos" 
+            onchange="onTimerMinutesChanged()"
           >
         </div>
-        <span id="timer-countdown" class="badge-info">Temporizador activo</span>
+        <span id="timer-countdown" class="badge-info">Radio encendida con temporizador</span>
       </div>
 
-      <!-- Opciones Modo Despertador (Encendido automático) -->
+      <!-- Opciones Modo Despertador -->
       <div id="opts-alarm" class="mode-content" style="display: none;">
         <label style="font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 6px;">
           Hora de encendido automático:
         </label>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="time" id="alarm-time" onchange="setupAlarm()">
+          <input type="time" id="alarm-time" onchange="onAlarmTimeChanged()">
         </div>
-        <span id="alarm-status" class="badge-info">Introduce una hora para programar el encendido</span>
+        <span id="alarm-status" class="badge-info">Configura la hora y pulsa "Despertador" para verificar</span>
       </div>
     </div>
   </div>
 
   <script>
-    // 1. Registro Service Worker
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("./sw.js").catch(console.error);
       });
     }
 
-    // 2. Base de datos de emisoras
     const stationsByLang = {
       eu: [
         { name: "Bizkaia Irratia", url: "https://nerbioi.radiopopular.eus/bizkaiairratia2" },
@@ -317,7 +306,6 @@
     };
 
     const player = document.getElementById("audio-player");
-    const radioBtn = document.getElementById("radio-btn");
     const radioStatus = document.getElementById("radio-status");
     const stationSelect = document.getElementById("station-select");
     const delayValueLabel = document.getElementById("delay-value");
@@ -325,7 +313,7 @@
     let currentDelay = 0;
     let delayTimer = null;
 
-    // 3. Gestión de Idioma
+    // 1. Selector de idiomas
     function populateStations(lang) {
       stationSelect.innerHTML = '<option value="">Selecciona emisora...</option>';
       const list = stationsByLang[lang] || [];
@@ -343,58 +331,153 @@
         btn.classList.toggle("active", btn.dataset.lang === lang);
       });
 
-      if (!player.paused) {
-        player.pause();
-        radioBtn.textContent = "▶ Oír";
-        radioBtn.style.background = "#007aff";
-        radioStatus.textContent = "Detenido";
-      }
-
+      stopAudio();
       populateStations(lang);
-
-      if (delayTimer) {
-        clearInterval(delayTimer);
-        delayTimer = null;
-      }
-      currentDelay = 0;
-      document.getElementById("delay-slider").value = 0;
-      delayValueLabel.textContent = "0 segundos (Directo)";
+      resetDelay();
     }
 
     const savedLang = localStorage.getItem("radio_selected_lang") || "eu";
     selectLanguage(savedLang);
 
-    // 4. Modos de funcionamiento (Normal / Temporizador / Despertador)
+    // 2. Control de reproducción básico
+    function updateButtonVisuals(activeMode, isPlaying) {
+      const bNormal = document.getElementById("btn-normal");
+      const bTimer = document.getElementById("btn-timer");
+      const bAlarm = document.getElementById("btn-alarm");
+
+      [bNormal, bTimer, bAlarm].forEach(b => {
+        b.classList.remove("active", "playing");
+      });
+
+      if (activeMode === "normal") {
+        bNormal.classList.add("active");
+        if (isPlaying) {
+          bNormal.classList.add("playing");
+          bNormal.textContent = "⏸ Pausar";
+        } else {
+          bNormal.textContent = "▶ Normal";
+        }
+        bTimer.textContent = "⏱️ Temporizador";
+        bAlarm.textContent = "⏰ Despertador";
+      } else if (activeMode === "timer") {
+        bTimer.classList.add("active");
+        if (isPlaying) {
+          bTimer.classList.add("playing");
+          bTimer.textContent = "⏸ Pausar Temp.";
+        } else {
+          bTimer.textContent = "⏱️ Temporizador";
+        }
+        bNormal.textContent = "▶ Normal";
+        bAlarm.textContent = "⏰ Despertador";
+      } else if (activeMode === "alarm") {
+        bAlarm.classList.add("active");
+        bAlarm.textContent = "⏰ Despertador (Armado)";
+        bNormal.textContent = "▶ Normal";
+        bTimer.textContent = "⏱️ Temporizador";
+      }
+    }
+
+    async function playAudio() {
+      const url = stationSelect.value;
+      if (!url) {
+        alert("Selecciona primero una emisora de la lista.");
+        return false;
+      }
+
+      if (player.src !== url) {
+        player.src = url;
+        player.load();
+      }
+
+      radioStatus.textContent = "Conectando stream...";
+      try {
+        await player.play();
+        if (currentDelay > 0) {
+          handleDelayInput(currentDelay);
+        } else {
+          radioStatus.textContent = "En directo 🔴";
+        }
+        updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+        return true;
+      } catch (err) {
+        console.error("Error reproduciendo:", err);
+        radioStatus.textContent = "Error de emisión";
+        alert("No se pudo conectar con la emisora.");
+        return false;
+      }
+    }
+
+    function stopAudio() {
+      if (delayTimer) {
+        clearInterval(delayTimer);
+        delayTimer = null;
+      }
+      player.pause();
+      radioStatus.textContent = "Detenido";
+    }
+
+    function onStationChanged() {
+      if (!player.paused) {
+        playAudio();
+      }
+    }
+
+    // 3. Modos: Normal / Temporizador / Despertador
     let currentMode = "normal";
     let sleepTimerId = null;
     let sleepTargetTime = null;
     let alarmCheckId = null;
     let alarmTargetTime = null;
+    let verificationTimeoutId = null;
 
-    function setMode(mode) {
-      currentMode = mode;
+    function activateNormalMode() {
+      document.getElementById("opts-timer").style.display = "none";
+      document.getElementById("opts-alarm").style.display = "none";
+      clearSleepTimer();
+      clearAlarm();
 
-      document.querySelectorAll(".mode-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.mode === mode);
+      if (currentMode === "normal" && !player.paused) {
+        stopAudio();
+        document.getElementById("mode-summary").textContent = "En pausa";
+        updateButtonVisuals("normal", false);
+        return;
+      }
+
+      currentMode = "normal";
+      document.getElementById("mode-summary").textContent = "Continuo";
+      playAudio().then(ok => {
+        updateButtonVisuals("normal", ok);
       });
+    }
 
-      document.getElementById("opts-timer").style.display = mode === "timer" ? "block" : "none";
-      document.getElementById("opts-alarm").style.display = mode === "alarm" ? "block" : "none";
+    function activateTimerMode() {
+      document.getElementById("opts-timer").style.display = "block";
+      document.getElementById("opts-alarm").style.display = "none";
+      clearAlarm();
 
-      const summaryEl = document.getElementById("mode-summary");
-
-      if (mode === "normal") {
-        summaryEl.textContent = "Continuo";
+      if (currentMode === "timer" && !player.paused) {
+        stopAudio();
         clearSleepTimer();
-        clearAlarm();
-      } else if (mode === "timer") {
-        summaryEl.textContent = "Auto-apagado";
-        clearAlarm();
+        document.getElementById("mode-summary").textContent = "En pausa";
+        updateButtonVisuals("timer", false);
+        return;
+      }
+
+      currentMode = "timer";
+      document.getElementById("mode-summary").textContent = "Auto-apagado";
+      playAudio().then(ok => {
+        if (ok) {
+          startSleepTimer();
+          updateButtonVisuals("timer", true);
+        } else {
+          updateButtonVisuals("timer", false);
+        }
+      });
+    }
+
+    function onTimerMinutesChanged() {
+      if (currentMode === "timer" && !player.paused) {
         startSleepTimer();
-      } else if (mode === "alarm") {
-        summaryEl.textContent = "Auto-encendido";
-        clearSleepTimer();
-        setupAlarm();
       }
     }
 
@@ -422,13 +505,10 @@
         const remainingMs = sleepTargetTime - Date.now();
         if (remainingMs <= 0) {
           clearSleepTimer();
-          if (!player.paused) {
-            player.pause();
-            radioBtn.textContent = "▶ Oír";
-            radioBtn.style.background = "#007aff";
-            radioStatus.textContent = "Apagado por temporizador 💤";
-          }
+          stopAudio();
           countdownEl.textContent = "Temporizador finalizado (Radio apagada)";
+          document.getElementById("mode-summary").textContent = "Apagado por temporizador 💤";
+          updateButtonVisuals("timer", false);
         } else {
           const totalSec = Math.ceil(remainingMs / 1000);
           const m = Math.floor(totalSec / 60);
@@ -446,52 +526,89 @@
         clearInterval(alarmCheckId);
         alarmCheckId = null;
       }
+      if (verificationTimeoutId) {
+        clearTimeout(verificationTimeoutId);
+        verificationTimeoutId = null;
+      }
       alarmTargetTime = null;
     }
 
-    function setupAlarm() {
+    async function activateAlarmMode() {
+      document.getElementById("opts-timer").style.display = "none";
+      document.getElementById("opts-alarm").style.display = "block";
+      clearSleepTimer();
       clearAlarm();
-      const timeVal = document.getElementById("alarm-time").value;
-      const statusEl = document.getElementById("alarm-status");
 
-      if (!timeVal) {
-        statusEl.textContent = "Introduce una hora para programar el encendido";
+      currentMode = "alarm";
+      const statusEl = document.getElementById("alarm-status");
+      const timeVal = document.getElementById("alarm-time").value;
+
+      if (!stationSelect.value) {
+        alert("Selecciona primero una emisora para el despertador.");
+        statusEl.textContent = "⚠️ Selecciona una emisora en el desplegable.";
+        updateButtonVisuals("normal", false);
         return;
       }
 
-      alarmTargetTime = timeVal;
-      statusEl.textContent = `⏰ Despertador programado para las ${alarmTargetTime}`;
-
-      alarmCheckId = setInterval(() => {
-        const now = new Date();
-        const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-        if (currentHHMM === alarmTargetTime && player.paused) {
-          clearAlarm();
-          statusEl.textContent = "⏰ ¡Alarma activada! Encendiendo...";
-          togglePlayRadio();
-        }
-      }, 1000);
-    }
-
-    // 5. Controles multimedia MediaSession
-    function updateMediaSession(stationName) {
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: stationName || 'Radio en directo',
-          artist: currentDelay === 0 ? 'En directo' : `Diferido (-${currentDelay}s)`,
-          album: 'Radio Time-Shift',
-          artwork: [
-            { src: './icon-radio-512.png', sizes: '512x512', type: 'image/png' }
-          ]
-        });
-
-        navigator.mediaSession.setActionHandler('play', () => togglePlayRadio());
-        navigator.mediaSession.setActionHandler('pause', () => togglePlayRadio());
+      if (!timeVal) {
+        alert("Indica la hora a la que debe sonar el despertador.");
+        statusEl.textContent = "⚠️ Configura una hora para el encendido.";
+        updateButtonVisuals("normal", false);
+        return;
       }
+
+      // Verificación de sonido durante 5 segundos
+      statusEl.textContent = "🔊 Comprobando señal durante 5 segundos...";
+      document.getElementById("mode-summary").textContent = "Probando stream (5s)...";
+
+      const ok = await playAudio();
+      if (!ok) {
+        statusEl.textContent = "❌ Error: La emisora no responde. Prueba con otra.";
+        document.getElementById("mode-summary").textContent = "Fallo en prueba";
+        return;
+      }
+
+      verificationTimeoutId = setTimeout(() => {
+        stopAudio();
+        alarmTargetTime = timeVal;
+        statusEl.textContent = `✅ Señal verificada. Radio armada para encenderse a las ${alarmTargetTime}.`;
+        document.getElementById("mode-summary").textContent = `Despertador programado: ${alarmTargetTime}`;
+        updateButtonVisuals("alarm", false);
+
+        // Vigilancia continua para encenderse en la hora fijada
+        alarmCheckId = setInterval(() => {
+          const now = new Date();
+          const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+          if (currentHHMM === alarmTargetTime && player.paused) {
+            clearAlarm();
+            statusEl.textContent = "⏰ ¡Despertador activado! Sonando...";
+            document.getElementById("mode-summary").textContent = "Despertador sonando";
+            currentMode = "normal";
+            playAudio().then(started => {
+              updateButtonVisuals("normal", started);
+            });
+          }
+        }, 1000);
+      }, 5000);
     }
 
-    // 6. Lógica de retardo Time-Shift
+    function onAlarmTimeChanged() {
+      const statusEl = document.getElementById("alarm-status");
+      statusEl.textContent = "Pulsa el botón 'Despertador' para comprobar la señal y armarlo.";
+    }
+
+    // 4. Retardo Time-Shift
+    function resetDelay() {
+      if (delayTimer) {
+        clearInterval(delayTimer);
+        delayTimer = null;
+      }
+      currentDelay = 0;
+      document.getElementById("delay-slider").value = 0;
+      delayValueLabel.textContent = "0 segundos (Directo)";
+    }
+
     function handleDelayInput(val) {
       const targetSec = parseInt(val, 10);
       delayValueLabel.textContent = targetSec === 0 ? "0 segundos (Directo)" : `${targetSec} segundo${targetSec > 1 ? 's' : ''}`;
@@ -544,76 +661,22 @@
       }
     }
 
-    async function togglePlayRadio() {
-      const url = stationSelect.value;
-      const stationName = stationSelect.options[stationSelect.selectedIndex]?.text;
+    // 5. MediaSession API
+    function updateMediaSession(stationName) {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: stationName || 'Radio en directo',
+          artist: currentDelay === 0 ? 'En directo' : `Diferido (-${currentDelay}s)`,
+          album: 'Radio Time-Shift',
+          artwork: [
+            { src: './icon-radio-512.png', sizes: '512x512', type: 'image/png' }
+          ]
+        });
 
-      if (!url) {
-        alert("Selecciona primero una emisora de la lista.");
-        return;
-      }
-
-      if (delayTimer) {
-        clearInterval(delayTimer);
-        delayTimer = null;
-      }
-
-      if (player.paused) {
-        radioBtn.textContent = "⌛ Conectando...";
-        radioBtn.disabled = true;
-        radioStatus.textContent = "Conectando stream...";
-
-        if (player.src !== url) {
-          player.src = url;
-          player.load();
-        }
-
-        try {
-          await player.play();
-          radioBtn.textContent = "⏸ Pausar";
-          radioBtn.style.background = "#ff3b30";
-          radioBtn.disabled = false;
-
-          if (currentDelay > 0) {
-            handleDelayInput(currentDelay);
-          } else {
-            radioStatus.textContent = "En directo 🔴";
-          }
-          updateMediaSession(stationName);
-
-          if (currentMode === "timer") {
-            startSleepTimer();
-          }
-        } catch (err) {
-          console.error("Error al iniciar reproducción:", err);
-          radioBtn.textContent = "▶ Oír";
-          radioBtn.style.background = "#007aff";
-          radioBtn.disabled = false;
-          radioStatus.textContent = "Error de emisión";
-          alert("No se pudo reproducir este stream en tu dispositivo.");
-        }
-      } else {
-        player.pause();
-        radioBtn.textContent = "▶ Oír";
-        radioBtn.style.background = "#007aff";
-        radioStatus.textContent = "En pausa";
+        navigator.mediaSession.setActionHandler('play', () => playAudio());
+        navigator.mediaSession.setActionHandler('pause', () => stopAudio());
       }
     }
-
-    stationSelect.addEventListener("change", () => {
-      if (delayTimer) {
-        clearInterval(delayTimer);
-        delayTimer = null;
-      }
-      player.pause();
-      player.src = stationSelect.value;
-      radioBtn.textContent = "▶ Oír";
-      radioBtn.style.background = "#007aff";
-      radioStatus.textContent = "Lista";
-      currentDelay = 0;
-      document.getElementById("delay-slider").value = 0;
-      delayValueLabel.textContent = "0 segundos (Directo)";
-    });
   </script>
 </body>
 </html>
