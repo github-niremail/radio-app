@@ -313,16 +313,23 @@
     let currentDelay = 0;
     let delayTimer = null;
 
-    // 1. Selector de idiomas
+    // 1. Selector de idiomas y persistencia de emisora
     function populateStations(lang) {
       stationSelect.innerHTML = '<option value="">Selecciona emisora...</option>';
       const list = stationsByLang[lang] || [];
+      const savedStation = localStorage.getItem("radio_selected_station");
+
       list.forEach(station => {
         const opt = document.createElement("option");
         opt.value = station.url;
         opt.textContent = station.name;
         stationSelect.appendChild(opt);
       });
+
+      // Si existe una emisora guardada en localStorage y pertenece a este idioma, se auto-selecciona
+      if (savedStation && list.some(s => s.url === savedStation)) {
+        stationSelect.value = savedStation;
+      }
     }
 
     function selectLanguage(lang) {
@@ -417,6 +424,13 @@
     }
 
     function onStationChanged() {
+      const selectedVal = stationSelect.value;
+      if (selectedVal) {
+        localStorage.setItem("radio_selected_station", selectedVal);
+      } else {
+        localStorage.removeItem("radio_selected_station");
+      }
+
       if (!player.paused) {
         playAudio();
       }
@@ -557,7 +571,7 @@
         return;
       }
 
-      // Verificación de sonido durante 5 segundos
+      // Verificación de audio durante 5 segundos
       statusEl.textContent = "🔊 Comprobando señal durante 5 segundos...";
       document.getElementById("mode-summary").textContent = "Probando stream (5s)...";
 
@@ -575,7 +589,6 @@
         document.getElementById("mode-summary").textContent = `Despertador programado: ${alarmTargetTime}`;
         updateButtonVisuals("alarm", false);
 
-        // Vigilancia continua para encenderse en la hora fijada
         alarmCheckId = setInterval(() => {
           const now = new Date();
           const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
