@@ -98,7 +98,7 @@
       margin-bottom: 16px; 
     }
 
-    select, input[type="time"] { 
+    select, input[type="time"], input[type="number"] { 
       flex: 1; 
       padding: 12px; 
       border-radius: 10px; 
@@ -251,20 +251,22 @@
         <button class="tab-btn mode-btn" data-mode="alarm" onclick="setMode('alarm')">Despertador</button>
       </div>
 
-      <!-- Opciones Modo Temporizador (Apagado automático) -->
+      <!-- Opciones Modo Temporizador (Cuadro de minutos manual) -->
       <div id="opts-timer" class="mode-content" style="display: none;">
         <label style="font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 6px;">
-          Apagar la radio tras:
+          Minutos hasta el apagado:
         </label>
-        <div style="display: flex; gap: 8px;">
-          <select id="timer-duration" onchange="startSleepTimer()">
-            <option value="15">15 minutos</option>
-            <option value="30" selected>30 minutos</option>
-            <option value="45">45 minutos</option>
-            <option value="60">60 minutos (1 hora)</option>
-            <option value="90">90 minutos (1.5 horas)</option>
-            <option value="120">120 minutos (2 horas)</option>
-          </select>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input 
+            type="number" 
+            id="timer-duration" 
+            min="1" 
+            max="360" 
+            value="30" 
+            placeholder="Minutos (ej. 30)" 
+            onchange="startSleepTimer()"
+            oninput="startSleepTimer()"
+          >
         </div>
         <span id="timer-countdown" class="badge-info">Temporizador activo</span>
       </div>
@@ -406,8 +408,15 @@
 
     function startSleepTimer() {
       clearSleepTimer();
-      const mins = parseInt(document.getElementById("timer-duration").value, 10);
-      sleepTargetTime = Date.now() + mins * 60 * 1000;
+      const minsVal = parseInt(document.getElementById("timer-duration").value, 10);
+      const countdownEl = document.getElementById("timer-countdown");
+
+      if (isNaN(minsVal) || minsVal <= 0) {
+        countdownEl.textContent = "Introduce un número válido de minutos";
+        return;
+      }
+
+      sleepTargetTime = Date.now() + minsVal * 60 * 1000;
 
       function updateCountdown() {
         const remainingMs = sleepTargetTime - Date.now();
@@ -419,13 +428,12 @@
             radioBtn.style.background = "#007aff";
             radioStatus.textContent = "Apagado por temporizador 💤";
           }
-          document.getElementById("timer-countdown").textContent = "Temporizador finalizado (Radio apagada)";
+          countdownEl.textContent = "Temporizador finalizado (Radio apagada)";
         } else {
           const totalSec = Math.ceil(remainingMs / 1000);
           const m = Math.floor(totalSec / 60);
           const s = totalSec % 60;
-          document.getElementById("timer-countdown").textContent = 
-            `La radio se apagará en: ${m}m ${String(s).padStart(2, '0')}s`;
+          countdownEl.textContent = `La radio se apagará en: ${m}m ${String(s).padStart(2, '0')}s`;
         }
       }
 
@@ -573,7 +581,6 @@
           }
           updateMediaSession(stationName);
 
-          // Si el temporizador estaba seleccionado, reiniciar la cuenta atrás al encender
           if (currentMode === "timer") {
             startSleepTimer();
           }
