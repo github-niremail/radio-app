@@ -62,7 +62,33 @@
       font-size: 13px; 
       color: #8e8e93; 
       font-weight: bold; 
-      margin-bottom: 14px; 
+      margin-bottom: 12px; 
+    }
+
+    /* Selector de idiomas */
+    .lang-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .lang-btn {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid #d1d1d6;
+      border-radius: 8px;
+      background: #f8f9fa;
+      font-size: 13px;
+      font-weight: 600;
+      color: #3a3a3c;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .lang-btn.active {
+      background: #007aff;
+      color: #ffffff;
+      border-color: #007aff;
     }
 
     .radio-controls { 
@@ -153,30 +179,22 @@
         <span>📻 EMISORAS DISPONIBLES</span>
         <span id="radio-status" style="color:#007aff;">Detenido</span>
       </div>
+
+      <!-- Botones de selección de idioma -->
+      <div class="lang-tabs">
+        <button class="lang-btn" data-lang="eu" onclick="selectLanguage('eu')">Euskera</button>
+        <button class="lang-btn" data-lang="es" onclick="selectLanguage('es')">Castellano</button>
+        <button class="lang-btn" data-lang="en" onclick="selectLanguage('en')">Inglés</button>
+      </div>
       
       <div class="radio-controls">
         <select id="station-select">
-          <option value="">Selecciona emisora...</option>
-          <option value="https://mp3-eitb.stream.flumotion.com/eitb/radioeuskadi.mp3">Radio Euskadi</option>
-          <option value="https://f111.rndfnk.com/star/crtve/rne5/ten/mp3/128/stream.mp3?cid=01GEP4TFQZ5W4H98CFP49FZDMS&sid=3LoYKKkThJdSOEqxtm3GWfsE2U4&token=W5xFT1Y_GFseQWnEvegs6mJeHypXVnPRagAlkS2-Rjw&tvf=XFyD7e8T5hhmMTExLnJuZGZuay5jb20">Radio Nacional de España (RNE 5)</option>
-          <option value="https://wecast-bl01.flumotion.com/copesedes/bilbao-mas.mp3">COPE (Bilbao)</option>
-          <option value="https://25483.live.streamtheworld.com/SER_BILBAOAAC.aac">Cadena SER (Bilbao)</option>
-          <option value="https://cdn-peer022.streaming-pro.com:6133/radionervion.aac">Radio Nervion</option>
-          <option value="https://nerbioi.radiopopular.eus/bizkaiairratia2">Bizkaia Irratia</option>
-          <option value="https://online.arrateirratia.eus/zuzenean">Arrate Irratia</option>
-          <option value="https://srv7021.dns-lcinternet.com/8072/stream">Radio Merindades</option>
-          <option value="https://media-ice.musicradio.com/SmoothUKMP3">Smooth UK</option>
-          <option value="https://media-ice.musicradio.com/GoldMP3">Gold</option>
-          <option value="https://media-ice.musicradio.com/LBCLondonMP3Low">LBC London</option>
-          <option value="https://radio.virginradio.co.uk/stream">Virgin Radio</option>
-          <option value="https://media-ice.musicradio.com/CapitalMP3">Capital FM</option>
-          <option value="https://fm939.wnyc.org/wnycfm">NPR News</option>
-          <option value="https://stream.live.vc.bbcmedia.co.uk/bbc_world_service">BBC News</option>
+          <!-- Opciones dinámicas según idioma seleccionado -->
         </select>
         <button id="radio-btn" class="radio-btn" onclick="togglePlayRadio()">▶ Oír</button>
       </div>
 
-      <!-- Time-Shift buffer control (0 to 120 seconds) -->
+      <!-- Control de retardo Time-Shift (0 a 120 segundos) -->
       <div class="delay-container">
         <div class="delay-header">
           <span>⏱️ Retardo de audio:</span>
@@ -211,7 +229,30 @@
       });
     }
 
-    // 2. Control de Audio y Time-Shift
+    // 2. Base de datos de emisoras clasificadas por idioma
+    const stationsByLang = {
+      eu: [
+        { name: "Bizkaia Irratia", url: "https://nerbioi.radiopopular.eus/bizkaiairratia2" },
+        { name: "Arrate Irratia", url: "https://online.arrateirratia.eus/zuzenean" }
+      ],
+      es: [
+        { name: "Radio Nacional de España (RNE 5)", url: "https://f111.rndfnk.com/star/crtve/rne5/ten/mp3/128/stream.mp3?cid=01GEP4TFQZ5W4H98CFP49FZDMS&sid=3LoYKKkThJdSOEqxtm3GWfsE2U4&token=W5xFT1Y_GFseQWnEvegs6mJeHypXVnPRagAlkS2-Rjw&tvf=XFyD7e8T5hhmMTExLnJuZGZuay5jb20" },
+        { name: "COPE (Bilbao)", url: "https://wecast-bl01.flumotion.com/copesedes/bilbao-mas.mp3" },
+        { name: "Cadena SER (Bilbao)", url: "https://25483.live.streamtheworld.com/SER_BILBAOAAC.aac" },
+        { name: "Radio Nervion", url: "https://cdn-peer022.streaming-pro.com:6133/radionervion.aac" },
+        { name: "Radio Merindades", url: "https://srv7021.dns-lcinternet.com/8072/stream" }
+      ],
+      en: [
+        { name: "Smooth UK", url: "https://media-ice.musicradio.com/SmoothUKMP3" },
+        { name: "Gold", url: "https://media-ice.musicradio.com/GoldMP3" },
+        { name: "LBC London", url: "https://media-ice.musicradio.com/LBCLondonMP3Low" },
+        { name: "Virgin Radio", url: "https://radio.virginradio.co.uk/stream" },
+        { name: "Capital FM", url: "https://media-ice.musicradio.com/CapitalMP3" },
+        { name: "NPR News", url: "https://fm939.wnyc.org/wnycfm" },
+        { name: "BBC News", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service" }
+      ]
+    };
+
     const player = document.getElementById("audio-player");
     const radioBtn = document.getElementById("radio-btn");
     const radioStatus = document.getElementById("radio-status");
@@ -221,6 +262,51 @@
     let currentDelay = 0;
     let delayTimer = null;
 
+    // 3. Renderizado y gestión de idiomas
+    function populateStations(lang) {
+      stationSelect.innerHTML = '<option value="">Selecciona emisora...</option>';
+      const list = stationsByLang[lang] || [];
+      list.forEach(station => {
+        const opt = document.createElement("option");
+        opt.value = station.url;
+        opt.textContent = station.name;
+        stationSelect.appendChild(opt);
+      });
+    }
+
+    function selectLanguage(lang) {
+      localStorage.setItem("radio_selected_lang", lang);
+
+      // Actualizar aspecto visual de los botones
+      document.querySelectorAll(".lang-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.lang === lang);
+      });
+
+      // Detener reproducción si cambia de lista para evitar inconsistencias
+      if (!player.paused) {
+        player.pause();
+        radioBtn.textContent = "▶ Oír";
+        radioBtn.style.background = "#007aff";
+        radioStatus.textContent = "Detenido";
+      }
+
+      populateStations(lang);
+
+      // Resetear slider de retardo
+      if (delayTimer) {
+        clearInterval(delayTimer);
+        delayTimer = null;
+      }
+      currentDelay = 0;
+      document.getElementById("delay-slider").value = 0;
+      delayValueLabel.textContent = "0 segundos (Directo)";
+    }
+
+    // Cargar idioma guardado o usar 'eu' (Euskera) por defecto
+    const savedLang = localStorage.getItem("radio_selected_lang") || "eu";
+    selectLanguage(savedLang);
+
+    // 4. Controles multimedia del sistema
     function updateMediaSession(stationName) {
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -237,6 +323,7 @@
       }
     }
 
+    // 5. Lógica del búfer de retardo
     function handleDelayInput(val) {
       const targetSec = parseInt(val, 10);
       delayValueLabel.textContent = targetSec === 0 ? "0 segundos (Directo)" : `${targetSec} segundo${targetSec > 1 ? 's' : ''}`;
