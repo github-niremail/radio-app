@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Nire Irratia</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#007aff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="./icon-radio-512.png">
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { 
+      background-color: #f2f2f7; 
+      display: flex; 
+      flex-direction: column; 
+      min-height: 100dvh; 
+    }
+    
+    header { 
+      background: #ffffff; 
+      padding: 14px 16px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      border-bottom: 1px solid #e5e5ea; 
+      position: sticky; 
+      top: 0; 
+      z-index: 10; 
+    }
+    header span { 
+      font-weight: 700; 
+      font-size: 17px; 
+      color: #1c1c1e; 
+    }
+
+    #main-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 16px 14px;
+      flex: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .app-card {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .card-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      font-size: 13px; 
+      color: #8e8e93; 
+      font-weight: bold; 
+      margin-bottom: 12px; 
+    }
+
+    .tab-group {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border: 1px solid #d1d1d6;
+      border-radius: 8px;
+      background: #f8f9fa;
+      font-size: 13px;
+      font-weight: 600;
+      color: #3a3a3c;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background: #007aff;
+      color: #ffffff;
+      border-color: #007aff;
+    }
+
+    .tab-btn.playing {
+      background: #34c759;
+      color: #ffffff;
+      border-color: #28a745;
+    }
+
+    .radio-controls { 
+      display: flex; 
+      gap: 10px; 
+      align-items: center; 
+      margin-bottom: 16px; 
+    }
+
+    select, input[type="time"], input[type="number"] { 
+      flex: 1; 
+      padding: 12px; 
+      border-radius: 10px; 
+      border: 1px solid #d1d1d6; 
+      font-size: 15px; 
+      background: #f8f9fa; 
+      outline: none; 
+      width: 100%;
+    }
+
+    .delay-container {
+      background: #f8f9fa;
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .delay-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      font-size: 13px; 
+      font-weight: 600; 
+      color: #333; 
+    }
+
+    .delay-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #d1d1d6;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .delay-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #007aff;
+      cursor: pointer;
+    }
+
+    .delay-scale {
+      display: flex; 
+      justify-content: space-between; 
+      font-size: 11px; 
+      color: #8e8e93; 
+    }
+
+    .mode-content {
+      background: #f8f9fa;
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 8px;
+    }
+
+    .badge-info {
+      font-size: 12px;
+      color: #007aff;
+      font-weight: 600;
+      margin-top: 6px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>Nire Irratia</span>
+  </header>
+
+  <div id="main-container">
+    <!-- Tarjeta Reproductor Principal -->
+    <div class="app-card">
+      <div class="card-header">
+        <span>📻 EMISORAS DISPONIBLES</span>
+        <span id="radio-status" style="color:#007aff;">Detenido</span>
+      </div>
+
+      <!-- Selector de idioma -->
+      <div class="tab-group">
+        <button class="tab-btn lang-btn" data-lang="eu" onclick="selectLanguage('eu')">Euskera</button>
+        <button class="tab-btn lang-btn" data-lang="es" onclick="selectLanguage('es')">Castellano</button>
+        <button class="tab-btn lang-btn" data-lang="en" onclick="selectLanguage('en')">Inglés</button>
+      </div>
+      
+      <div class="radio-controls">
+        <select id="station-select" onchange="onStationChanged()">
+          <!-- Opciones dinámicas -->
+        </select>
+      </div>
+
+      <!-- Control de retardo Time-Shift -->
+      <div class="delay-container">
+        <div class="delay-header">
+          <span>⏱️ Retardo de audio:</span>
+          <span id="delay-value" style="color: #007aff; font-weight: bold;">0 segundos (Directo)</span>
+        </div>
+        <input 
+          type="range" 
+          id="delay-slider" 
+          class="delay-slider" 
+          min="0" 
+          max="120" 
+          value="0" 
+          step="1" 
+          oninput="handleDelayInput(this.value)"
+        >
+        <div class="delay-scale">
+          <span>0s (Directo)</span>
+          <span>60s</span>
+          <span>120s (2 min)</span>
+        </div>
+      </div>
+
+      <audio id="audio-player" preload="none"></audio>
+    </div>
+
+    <!-- Tarjeta Modos de Funcionamiento y Controles -->
+    <div class="app-card">
+      <div class="card-header">
+        <span>⚙️ MODO Y REPRODUCCIÓN</span>
+        <span id="mode-summary" style="color:#8e8e93;">Detenido</span>
+      </div>
+
+      <div class="tab-group">
+        <button id="btn-normal" class="tab-btn mode-btn active" onclick="activateNormalMode()">▶ Normal</button>
+        <button id="btn-timer" class="tab-btn mode-btn" onclick="activateTimerMode()">⏱️ Temporizador</button>
+        <button id="btn-alarm" class="tab-btn mode-btn" onclick="activateAlarmMode()">⏰ Despertador</button>
+      </div>
+
+      <!-- Opciones Modo Temporizador -->
+      <div id="opts-timer" class="mode-content" style="display: none;">
+        <label style="font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 6px;">
+          Minutos hasta el apagado:
+        </label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input 
+            type="number" 
+            id="timer-duration" 
+            min="1" 
+            max="360" 
+            value="30" 
+            placeholder="Minutos" 
+            onchange="onTimerMinutesChanged()"
+          >
+        </div>
+        <span id="timer-countdown" class="badge-info">Radio encendida con temporizador</span>
+      </div>
+
+      <!-- Opciones Modo Despertador -->
+      <div id="opts-alarm" class="mode-content" style="display: none;">
+        <label style="font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 6px;">
+          Hora de encendido automático:
+        </label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="time" id="alarm-time" onchange="onAlarmTimeChanged()">
+        </div>
+        <span id="alarm-status" class="badge-info">Configura la hora y pulsa "Despertador" para verificar</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(console.error);
+      });
+    }
+
+    const stationsByLang = {
+      eu: [
+        { name: "Bizkaia Irratia", url: "https://nerbioi.radiopopular.eus/bizkaiairratia2" },
+        { name: "Arrate Irratia", url: "https://online.arrateirratia.eus/zuzenean" }
+      ],
+      es: [
+        { name: "RNE 1 Radio Nacional de España", url: "https://dispatcher.rndfnk.com/crtve/rne1/mel/mp3/high" },
+        { name: "RNE Radio 5", url: "https://dispatcher.rndfnk.com/crtve/rne5/mad/mp3/high" },
+        { name: "RNE Radio Clásica", url: "https://dispatcher.rndfnk.com/crtve/rnerc/main/mp3/high" },
+        { name: "Cadena SER", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER_ALT1.mp3" },
+        { name: "Cadena SER (Bilbao)", url: "https://25483.live.streamtheworld.com/SER_BILBAOAAC.aac" },
+        { name: "COPE", url: "https://flucast03-h-cloud.flumotion.com/cope/net1.mp3" },
+        { name: "COPE (Bilbao)", url: "https://wecast-bl01.flumotion.com/copesedes/bilbao-mas.mp3" },
+        { name: "Onda Cero", url: "https://stream.zeno.fm/dzqaazsn3p8uv" },
+        { name: "Radio Euskadi", url: "https://multimedia.eitb.eus/live-content/radioeuskadi-hls/master.m3u8" },
+        { name: "Radio Nervión", url: "https://cdn-peer022.streaming-pro.com:6133/radionervion.aac" },
+        { name: "Radio Merindades", url: "https://srv7021.dns-lcinternet.com/8072/stream" },
+        { name: "Canal Sur Radio", url: "https://rtva-live-radio.flumotion.com/rtva/csrcor.mp3" },
+        { name: "Radio Voz", url: "https://live.radiovoz.es/mp3/stream_cadena.mp3" },
+        { name: "Los 40 Principales", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40.mp3" },
+        { name: "Los 40 Classic", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40_CLASSIC.mp3" },
+        { name: "Los 40 Dance", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40_DANCE.mp3" },
+        { name: "Los 40 Urban", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40_URBAN.mp3" },
+        { name: "Cadena 100", url: "https://cadena100-cope-rrcast.flumotion.com/cope/cadena100-low.mp3" },
+        { name: "Europa FM", url: "https://one.cloudstreaming.eu/proxy/europa/stream" },
+        { name: "Cadena Dial", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/DIAL_ASO_ESTEPA.mp3" },
+        { name: "Radiolé", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOLE.mp3" },
+        { name: "Rock-FM", url: "https://rockfm-cope-rrcast.flumotion.com/cope/rockfm-low.mp3" },
+        { name: "Bikini FM", url: "https://stream.serviciospararadios.es/listen/bikini_fm/bikinifm-castellon.mp3" },
+        { name: "Loca FM", url: "https://s47.myradiostream.com/13914/listen.mp3" }
+      ],
+      en: [
+        { name: "Smooth UK", url: "https://media-ice.musicradio.com/SmoothUKMP3" },
+        { name: "Gold", url: "https://media-ice.musicradio.com/GoldMP3" },
+        { name: "LBC London", url: "https://media-ice.musicradio.com/LBCLondonMP3Low" },
+        { name: "Virgin Radio", url: "https://radio.virginradio.co.uk/stream" },
+        { name: "Capital FM", url: "https://media-ice.musicradio.com/CapitalMP3" },
+        { name: "NPR News", url: "https://fm939.wnyc.org/wnycfm" },
+        { name: "Irish Pub Radio", url: "https://solid24.streamupsolutions.com/proxy/vbkiacud?mp=/live" },
+        { name: "BBC News", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service" }
+      ]
+    };
+
+    const player = document.getElementById("audio-player");
+    const radioStatus = document.getElementById("radio-status");
+    const stationSelect = document.getElementById("station-select");
+    const delayValueLabel = document.getElementById("delay-value");
+
+    let currentDelay = 0;
+    let delayTimer = null;
+    let hlsInstance = null;
+    let currentLoadedUrl = "";
+
+    // 1. Selector de idiomas y persistencia de emisora
+    function populateStations(lang) {
+      stationSelect.innerHTML = '<option value="">Selecciona emisora...</option>';
+      const list = stationsByLang[lang] || [];
+      const savedStation = localStorage.getItem("radio_selected_station");
+
+      list.forEach(station => {
+        const opt = document.createElement("option");
+        opt.value = station.url;
+        opt.textContent = station.name;
+        stationSelect.appendChild(opt);
+      });
+
+      if (savedStation && list.some(s => s.url === savedStation)) {
+        stationSelect.value = savedStation;
+      }
+    }
+
+    function selectLanguage(lang) {
+      localStorage.setItem("radio_selected_lang", lang);
+      document.querySelectorAll(".lang-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.lang === lang);
+      });
+
+      stopAudio();
+      populateStations(lang);
+      resetDelay();
+    }
+
+    const savedLang = localStorage.getItem("radio_selected_lang") || "eu";
+    selectLanguage(savedLang);
+
+    // 2. Control de reproducción básico (con soporte MP3/AAC y HLS .m3u8)
+    function updateButtonVisuals(activeMode, isPlaying) {
+      const bNormal = document.getElementById("btn-normal");
+      const bTimer = document.getElementById("btn-timer");
+      const bAlarm = document.getElementById("btn-alarm");
+
+      [bNormal, bTimer, bAlarm].forEach(b => {
+        b.classList.remove("active", "playing");
+      });
+
+      if (activeMode === "normal") {
+        bNormal.classList.add("active");
+        if (isPlaying) {
+          bNormal.classList.add("playing");
+          bNormal.textContent = "⏸ Pausar";
+        } else {
+          bNormal.textContent = "▶ Normal";
+        }
+        bTimer.textContent = "⏱️ Temporizador";
+        bAlarm.textContent = "⏰ Despertador";
+      } else if (activeMode === "timer") {
+        bTimer.classList.add("active");
+        if (isPlaying) {
+          bTimer.classList.add("playing");
+          bTimer.textContent = "⏸ Pausar Temp.";
+        } else {
+          bTimer.textContent = "⏱️ Temporizador";
+        }
+        bNormal.textContent = "▶ Normal";
+        bAlarm.textContent = "⏰ Despertador";
+      } else if (activeMode === "alarm") {
+        bAlarm.classList.add("active");
+        bAlarm.textContent = "⏰ Despertador (Armado)";
+        bNormal.textContent = "▶ Normal";
+        bTimer.textContent = "⏱️ Temporizador";
+      }
+    }
+
+    function loadStreamSource(url) {
+      return new Promise((resolve, reject) => {
+        if (currentLoadedUrl === url) {
+          resolve();
+          return;
+        }
+
+        if (hlsInstance) {
+          hlsInstance.destroy();
+          hlsInstance = null;
+        }
+
+        currentLoadedUrl = url;
+
+        if (url.includes(".m3u8")) {
+          if (player.canPlayType("application/vnd.apple.mpegurl")) {
+            player.src = url;
+            player.load();
+            resolve();
+          } else if (typeof Hls !== "undefined" && Hls.isSupported()) {
+            hlsInstance = new Hls();
+            hlsInstance.loadSource(url);
+            hlsInstance.attachMedia(player);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => resolve());
+            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+              if (data.fatal) {
+                currentLoadedUrl = "";
+                reject(new Error("Error cargando stream HLS"));
+              }
+            });
+          } else {
+            currentLoadedUrl = "";
+            reject(new Error("HLS no soportado en este navegador"));
+          }
+        } else {
+          player.src = url;
+          player.load();
+          resolve();
+        }
+      });
+    }
+
+    async function playAudio() {
+      const url = stationSelect.value;
+      if (!url) {
+        alert("Selecciona primero una emisora de la lista.");
+        return false;
+      }
+
+      radioStatus.textContent = "Conectando stream...";
+      try {
+        await loadStreamSource(url);
+        await player.play();
+        if (currentDelay > 0) {
+          handleDelayInput(currentDelay);
+        } else {
+          radioStatus.textContent = "En directo 🔴";
+        }
+        updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+        return true;
+      } catch (err) {
+        console.error("Error reproduciendo:", err);
+        currentLoadedUrl = "";
+        radioStatus.textContent = "Error de emisión";
+        alert("No se pudo conectar con la emisora.");
+        return false;
+      }
+    }
+
+    function stopAudio() {
+      if (delayTimer) {
+        clearInterval(delayTimer);
+        delayTimer = null;
+      }
+      player.pause();
+      radioStatus.textContent = "Detenido";
+    }
+
+    function onStationChanged() {
+      const selectedVal = stationSelect.value;
+      if (selectedVal) {
+        localStorage.setItem("radio_selected_station", selectedVal);
+      } else {
+        localStorage.removeItem("radio_selected_station");
+      }
+
+      if (!player.paused) {
+        playAudio();
+      }
+    }
+
+    // 3. Modos: Normal / Temporizador / Despertador
+    let currentMode = "normal";
+    let sleepTimerId = null;
+    let sleepTargetTime = null;
+    let alarmCheckId = null;
+    let alarmTargetTime = null;
+    let verificationTimeoutId = null;
+
+    function activateNormalMode() {
+      document.getElementById("opts-timer").style.display = "none";
+      document.getElementById("opts-alarm").style.display = "none";
+      clearSleepTimer();
+      clearAlarm();
+
+      if (currentMode === "normal" && !player.paused) {
+        stopAudio();
+        document.getElementById("mode-summary").textContent = "En pausa";
+        updateButtonVisuals("normal", false);
+        return;
+      }
+
+      currentMode = "normal";
+      document.getElementById("mode-summary").textContent = "Continuo";
+      playAudio().then(ok => {
+        updateButtonVisuals("normal", ok);
+      });
+    }
+
+    function activateTimerMode() {
+      document.getElementById("opts-timer").style.display = "block";
+      document.getElementById("opts-alarm").style.display = "none";
+      clearAlarm();
+
+      if (currentMode === "timer" && !player.paused) {
+        stopAudio();
+        clearSleepTimer();
+        document.getElementById("mode-summary").textContent = "En pausa";
+        updateButtonVisuals("timer", false);
+        return;
+      }
+
+      currentMode = "timer";
+      document.getElementById("mode-summary").textContent = "Auto-apagado";
+      playAudio().then(ok => {
+        if (ok) {
+          startSleepTimer();
+          updateButtonVisuals("timer", true);
+        } else {
+          updateButtonVisuals("timer", false);
+        }
+      });
+    }
+
+    function onTimerMinutesChanged() {
+      if (currentMode === "timer" && !player.paused) {
+        startSleepTimer();
+      }
+    }
+
+    function clearSleepTimer() {
+      if (sleepTimerId) {
+        clearInterval(sleepTimerId);
+        sleepTimerId = null;
+      }
+      sleepTargetTime = null;
+    }
+
+    function startSleepTimer() {
+      clearSleepTimer();
+      const minsVal = parseInt(document.getElementById("timer-duration").value, 10);
+      const countdownEl = document.getElementById("timer-countdown");
+
+      if (isNaN(minsVal) || minsVal <= 0) {
+        countdownEl.textContent = "Introduce un número válido de minutos";
+        return;
+      }
+
+      sleepTargetTime = Date.now() + minsVal * 60 * 1000;
+
+      function updateCountdown() {
+        const remainingMs = sleepTargetTime - Date.now();
+        if (remainingMs <= 0) {
+          clearSleepTimer();
+          stopAudio();
+          countdownEl.textContent = "Temporizador finalizado (Radio apagada)";
+          document.getElementById("mode-summary").textContent = "Apagado por temporizador 💤";
+          updateButtonVisuals("timer", false);
+        } else {
+          const totalSec = Math.ceil(remainingMs / 1000);
+          const m = Math.floor(totalSec / 60);
+          const s = totalSec % 60;
+          countdownEl.textContent = `La radio se apagará en: ${m}m ${String(s).padStart(2, '0')}s`;
+        }
+      }
+
+      updateCountdown();
+      sleepTimerId = setInterval(updateCountdown, 1000);
+    }
+
+    function clearAlarm() {
+      if (alarmCheckId) {
+        clearInterval(alarmCheckId);
+        alarmCheckId = null;
+      }
+      if (verificationTimeoutId) {
+        clearTimeout(verificationTimeoutId);
+        verificationTimeoutId = null;
+      }
+      alarmTargetTime = null;
+    }
+
+    async function activateAlarmMode() {
+      document.getElementById("opts-timer").style.display = "none";
+      document.getElementById("opts-alarm").style.display = "block";
+      clearSleepTimer();
+      clearAlarm();
+
+      currentMode = "alarm";
+      const statusEl = document.getElementById("alarm-status");
+      const timeVal = document.getElementById("alarm-time").value;
+
+      if (!stationSelect.value) {
+        alert("Selecciona primero una emisora para el despertador.");
+        statusEl.textContent = "⚠️ Selecciona una emisora en el desplegable.";
+        updateButtonVisuals("normal", false);
+        return;
+      }
+
+      if (!timeVal) {
+        alert("Indica la hora a la que debe sonar el despertador.");
+        statusEl.textContent = "⚠️ Configura una hora para el encendido.";
+        updateButtonVisuals("normal", false);
+        return;
+      }
+
+      // Verificación de audio durante 5 segundos
+      statusEl.textContent = "🔊 Comprobando señal durante 5 segundos...";
+      document.getElementById("mode-summary").textContent = "Probando stream (5s)...";
+
+      const ok = await playAudio();
+      if (!ok) {
+        statusEl.textContent = "❌ Error: La emisora no responde. Prueba con otra.";
+        document.getElementById("mode-summary").textContent = "Fallo en prueba";
+        return;
+      }
+
+      verificationTimeoutId = setTimeout(() => {
+        stopAudio();
+        alarmTargetTime = timeVal;
+        statusEl.textContent = `✅ Señal verificada. Radio armada para encenderse a las ${alarmTargetTime}.`;
+        document.getElementById("mode-summary").textContent = `Despertador programado: ${alarmTargetTime}`;
+        updateButtonVisuals("alarm", false);
+
+        alarmCheckId = setInterval(() => {
+          const now = new Date();
+          const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+          if (currentHHMM === alarmTargetTime && player.paused) {
+            clearAlarm();
+            statusEl.textContent = "⏰ ¡Despertador activado! Sonando...";
+            document.getElementById("mode-summary").textContent = "Despertador sonando";
+            currentMode = "normal";
+            playAudio().then(started => {
+              updateButtonVisuals("normal", started);
+            });
+          }
+        }, 1000);
+      }, 5000);
+    }
+
+    function onAlarmTimeChanged() {
+      const statusEl = document.getElementById("alarm-status");
+      statusEl.textContent = "Pulsa el botón 'Despertador' para comprobar la señal y armarlo.";
+    }
+
+    // 4. Retardo Time-Shift
+    function resetDelay() {
+      if (delayTimer) {
+        clearInterval(delayTimer);
+        delayTimer = null;
+      }
+      currentDelay = 0;
+      document.getElementById("delay-slider").value = 0;
+      delayValueLabel.textContent = "0 segundos (Directo)";
+    }
+
+    function handleDelayInput(val) {
+      const targetSec = parseInt(val, 10);
+      delayValueLabel.textContent = targetSec === 0 ? "0 segundos (Directo)" : `${targetSec} segundo${targetSec > 1 ? 's' : ''}`;
+
+      if (targetSec === 0) {
+        if (delayTimer) {
+          clearInterval(delayTimer);
+          delayTimer = null;
+        }
+        currentDelay = 0;
+        if (player.seekable && player.seekable.length > 0) {
+          player.currentTime = player.seekable.end(player.seekable.length - 1);
+        }
+        if (!player.paused) {
+          radioStatus.textContent = "En directo 🔴";
+          updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+        }
+        return;
+      }
+
+      if (!player.paused && targetSec > currentDelay) {
+        const additionalWait = targetSec - currentDelay;
+        player.pause();
+
+        let remaining = additionalWait;
+        radioStatus.textContent = `Sincronizando delay (${remaining}s)...`;
+
+        if (delayTimer) clearInterval(delayTimer);
+
+        delayTimer = setInterval(() => {
+          remaining--;
+          if (remaining > 0) {
+            radioStatus.textContent = `Sincronizando delay (${remaining}s)...`;
+          } else {
+            clearInterval(delayTimer);
+            delayTimer = null;
+            currentDelay = targetSec;
+            player.play().then(() => {
+              radioStatus.textContent = `En diferido (-${currentDelay}s) 🟡`;
+              updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+            }).catch(console.error);
+          }
+        }, 1000);
+      } else {
+        currentDelay = targetSec;
+        if (!player.paused) {
+          radioStatus.textContent = `En diferido (-${currentDelay}s) 🟡`;
+          updateMediaSession(stationSelect.options[stationSelect.selectedIndex]?.text);
+        }
+      }
+    }
+
+    // 5. MediaSession API
+    function updateMediaSession(stationName) {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: stationName || 'Radio en directo',
+          artist: currentDelay === 0 ? 'En directo' : `Diferido (-${currentDelay}s)`,
+          album: 'Nire Irratia',
+          artwork: [
+            { src: './icon-radio-512.png', sizes: '512x512', type: 'image/png' }
+          ]
+        });
+
+        navigator.mediaSession.setActionHandler('play', () => playAudio());
+        navigator.mediaSession.setActionHandler('pause', () => stopAudio());
+      }
+    }
+  </script>
+</body>
+</html>
