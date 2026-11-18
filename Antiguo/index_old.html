@@ -11,6 +11,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="./icon-radio-512.png">
 
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { 
@@ -285,24 +287,42 @@
     const stationsByLang = {
       eu: [
         { name: "Bizkaia Irratia", url: "https://nerbioi.radiopopular.eus/bizkaiairratia2" },
-        { name: "Arrate Irratia", url: "https://online.arrateirratia.eus/zuzenean" }
+        { name: "Arrate Irratia", url: "https://online.arrateirratia.eus/zuzenean" },
+        { name: "Antxeta Irratia", url: "https://streaming.antxetamedia.eus:8443/antxeta1" }
       ],
       es: [
-        { name: "Radio Nacional de España (RNE 5)", url: "https://f111.rndfnk.com/star/crtve/rne5/ten/mp3/128/stream.mp3?cid=01GEP4TFQZ5W4H98CFP49FZDMS&sid=3LoYKKkThJdSOEqxtm3GWfsE2U4&token=W5xFT1Y_GFseQWnEvegs6mJeHypXVnPRagAlkS2-Rjw&tvf=XFyD7e8T5hhmMTExLnJuZGZuay5jb20" },
-        { name: "COPE (Bilbao)", url: "https://wecast-bl01.flumotion.com/copesedes/bilbao-mas.mp3" },
+        { name: "Radio Nervión", url: "https://cdn-peer022.streaming-pro.com:6133/radionervion.aac" },
+        { name: "Radio Merindades", url: "https://srv7021.dns-lcinternet.com/8072/stream" },
+        { name: "RNE Radio 1", url: "https://dispatcher.rndfnk.com/crtve/rne1/mel/mp3/high" },
+        { name: "RNE Radio 5", url: "https://dispatcher.rndfnk.com/crtve/rne5/mad/mp3/high" },
+        { name: "RNE Radio Clásica", url: "https://dispatcher.rndfnk.com/crtve/rnerc/main/mp3/high" },
         { name: "Cadena SER (Bilbao)", url: "https://25483.live.streamtheworld.com/SER_BILBAOAAC.aac" },
-        { name: "Radio Nervion", url: "https://cdn-peer022.streaming-pro.com:6133/radionervion.aac" },
-        { name: "Radio Merindades", url: "https://srv7021.dns-lcinternet.com/8072/stream" }
+        { name: "COPE (Bilbao)", url: "https://wecast-bl01.flumotion.com/copesedes/bilbao-mas.mp3" },
+        { name: "Onda Cero", url: "https://stream.zeno.fm/dzqaazsn3p8uv" },
+        { name: "Rock-FM", url: "https://rockfm-cope-rrcast.flumotion.com/cope/rockfm-low.mp3" },
+        { name: "Cadena 100", url: "https://cadena100-cope-rrcast.flumotion.com/cope/cadena100-low.mp3" },
+        { name: "Europa FM", url: "https://one.cloudstreaming.eu/proxy/europa/stream" },
+        { name: "Cadena Dial", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/DIAL_ASO_ESTEPA.mp3" },
+        { name: "Los 40 Principales", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40.mp3" },
+        { name: "Los 40 Classic", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40_CLASSIC.mp3" },
+        { name: "Los 40 Dance", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40_DANCE.mp3" },
+        { name: "Los 40 Urban", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40_URBAN.mp3" },
+        { name: "Radiolé", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOLE.mp3" },
+        { name: "Bikini FM", url: "https://stream.serviciospararadios.es/listen/bikini_fm/bikinifm-castellon.mp3" },
+        { name: "Loca FM", url: "https://s47.myradiostream.com/13914/listen.mp3" },
+        { name: "Canal Sur Radio", url: "https://rtva-live-radio.flumotion.com/rtva/csrcor.mp3" },
+        { name: "Radio Voz", url: "https://live.radiovoz.es/mp3/stream_cadena.mp3" },
+        { name: "Radio Euskadi", url: "https://multimedia.eitb.eus/live-content/radioeuskadi-hls/master.m3u8" }
       ],
       en: [
+        { name: "BBC News", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service" },
+        { name: "NPR News", url: "https://fm939.wnyc.org/wnycfm" },
+        { name: "LBC London", url: "https://media-ice.musicradio.com/LBCLondonMP3Low" },
+        { name: "Irish Pub Radio", url: "https://solid24.streamupsolutions.com/proxy/vbkiacud?mp=/live" },
         { name: "Smooth UK", url: "https://media-ice.musicradio.com/SmoothUKMP3" },
         { name: "Gold", url: "https://media-ice.musicradio.com/GoldMP3" },
-        { name: "LBC London", url: "https://media-ice.musicradio.com/LBCLondonMP3Low" },
-        { name: "Virgin Radio", url: "https://radio.virginradio.co.uk/stream" },
         { name: "Capital FM", url: "https://media-ice.musicradio.com/CapitalMP3" },
-        { name: "NPR News", url: "https://fm939.wnyc.org/wnycfm" },
-        { name: "Irish Pub Radio", url: "https://solid24.streamupsolutions.com/proxy/vbkiacud?mp=/live" },
-        { name: "BBC News", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service" }
+        { name: "Virgin Radio", url: "https://radio.virginradio.co.uk/stream" }
       ]
     };
 
@@ -313,6 +333,8 @@
 
     let currentDelay = 0;
     let delayTimer = null;
+    let hlsInstance = null;
+    let currentLoadedUrl = "";
 
     // 1. Selector de idiomas y persistencia de emisora
     function populateStations(lang) {
@@ -346,7 +368,7 @@
     const savedLang = localStorage.getItem("radio_selected_lang") || "eu";
     selectLanguage(savedLang);
 
-    // 2. Control de reproducción básico
+    // 2. Control de reproducción básico (con soporte MP3/AAC y HLS .m3u8)
     function updateButtonVisuals(activeMode, isPlaying) {
       const bNormal = document.getElementById("btn-normal");
       const bTimer = document.getElementById("btn-timer");
@@ -384,6 +406,48 @@
       }
     }
 
+    function loadStreamSource(url) {
+      return new Promise((resolve, reject) => {
+        if (currentLoadedUrl === url) {
+          resolve();
+          return;
+        }
+
+        if (hlsInstance) {
+          hlsInstance.destroy();
+          hlsInstance = null;
+        }
+
+        currentLoadedUrl = url;
+
+        if (url.includes(".m3u8")) {
+          if (player.canPlayType("application/vnd.apple.mpegurl")) {
+            player.src = url;
+            player.load();
+            resolve();
+          } else if (typeof Hls !== "undefined" && Hls.isSupported()) {
+            hlsInstance = new Hls();
+            hlsInstance.loadSource(url);
+            hlsInstance.attachMedia(player);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => resolve());
+            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+              if (data.fatal) {
+                currentLoadedUrl = "";
+                reject(new Error("Error cargando stream HLS"));
+              }
+            });
+          } else {
+            currentLoadedUrl = "";
+            reject(new Error("HLS no soportado en este navegador"));
+          }
+        } else {
+          player.src = url;
+          player.load();
+          resolve();
+        }
+      });
+    }
+
     async function playAudio() {
       const url = stationSelect.value;
       if (!url) {
@@ -391,13 +455,9 @@
         return false;
       }
 
-      if (player.src !== url) {
-        player.src = url;
-        player.load();
-      }
-
       radioStatus.textContent = "Conectando stream...";
       try {
+        await loadStreamSource(url);
         await player.play();
         if (currentDelay > 0) {
           handleDelayInput(currentDelay);
@@ -408,6 +468,7 @@
         return true;
       } catch (err) {
         console.error("Error reproduciendo:", err);
+        currentLoadedUrl = "";
         radioStatus.textContent = "Error de emisión";
         alert("No se pudo conectar con la emisora.");
         return false;
