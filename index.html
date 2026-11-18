@@ -424,22 +424,38 @@
 
         currentLoadedUrl = url;
 
-        if (url.includes(".m3u8")) {
-          if (player.canPlayType("application/vnd.apple.mpegurl")) {
-            player.src = url;
-            player.load();
-            resolve();
-          } else if (typeof Hls !== "undefined" && Hls.isSupported()) {
-            hlsInstance = new Hls();
+        if (url.toLowerCase().includes(".m3u8")) {
+          if (typeof Hls !== "undefined" && Hls.isSupported()) {
+            hlsInstance = new Hls({
+              enableWorker: true,
+              lowLatencyMode: true,
+              backBufferLength: 120
+            });
             hlsInstance.loadSource(url);
             hlsInstance.attachMedia(player);
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => resolve());
             hlsInstance.on(Hls.Events.ERROR, (event, data) => {
               if (data.fatal) {
-                currentLoadedUrl = "";
-                reject(new Error("Error cargando stream HLS"));
+                switch (data.type) {
+                  case Hls.ErrorTypes.NETWORK_ERROR:
+                    hlsInstance.startLoad();
+                    break;
+                  case Hls.ErrorTypes.MEDIA_ERROR:
+                    hlsInstance.recoverMediaError();
+                    break;
+                  default:
+                    hlsInstance.destroy();
+                    hlsInstance = null;
+                    currentLoadedUrl = "";
+                    reject(new Error("Error fatal cargando stream HLS"));
+                    break;
+                }
               }
             });
+          } else if (player.canPlayType("application/vnd.apple.mpegurl")) {
+            player.src = url;
+            player.load();
+            resolve();
           } else {
             currentLoadedUrl = "";
             reject(new Error("HLS no soportado en este navegador"));
